@@ -1,0 +1,37 @@
+name: Build Docker Image, Deploy to ECR, Start Containers & Read Env vars from Secrets Manager
+on: 
+    push:
+        branches:
+            - master
+            - stage
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}          
+        STACK_NAME: testenv
+        AWS_DEFAULT_REGION: us-east-2
+    steps:
+    - uses: actions/checkout@v1
+    - name: Docker Build
+      run: |
+        docker build -f Dockerfile -t "$STACK_NAME-repo" .
+        echo "stack name is again $STACK_NAME"
+    - name: AWS GET Account, Login And Upload To ECR
+      run: |
+        aws sts get-caller-identity --output json | jq '.Account' 
+        export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output json | jq '.Account' | sed "s/\"//g")
+        $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+        docker tag "$STACK_NAME-repo:latest" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$STACK_NAME-repo:latest"
+        docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$STACK_NAME-repo:latest"  
+    - name: AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service 
+      run: |
+         OLD="$(aws ecs describe-task-definition --task-definition $STACK_NAME-family | jq '. | tostring')"  
+         NEW="$( aws secretsmanager get-secret-value --secret-id prod/$STACK_NAME | jq '.SecretString' | jq 'fromjson' |   jq 'to_entries | map_values({name:.key,value:.value})' | jq '. | tostring')"  
+         TASKDEF="$(echo $OLD | jq --argjson new "$(echo $NEW | jq '. | fromjson')" 'fromjson | .taskDefinition.containerDefinitions[].environment=$new |  del(.taskDefinition.taskDefinitionArn) | del(.taskDefinition.revision) | del(.taskDefinition.status) | del(.taskDefinition.requiresAttributes) | del(.taskDefinition.compatibilities)')"
+         REVISED=$(echo $TASKDEF | jq '. = .taskDefinition  | del(.taskDefinition.containerDefinitions)  | del(.taskDefinition)')
+         NEW_TASK_INFO=$(aws ecs register-task-definition --region "$AWS_DEFAULT_REGION" --cli-input-json "$REVISED")
+         NEW_REVISION=$(echo $NEW_TASK_INFO | jq '.taskDefinition.revision')
+         aws ecs update-service --cluster "$STACK_NAME-cluster"   --service "$STACK_NAME-service" --force-new-deployment --task-definition $STACK_NAME-family:$NEW_REVISION
+
