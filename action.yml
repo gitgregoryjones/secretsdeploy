@@ -17,7 +17,7 @@ inputs:
     required: false
 runs:
   using: node12
-  main: 'dist/main.js'
+  main: 'main.js'
 branding:
   icon: upload
   color: orange
