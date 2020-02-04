@@ -1,0 +1,11 @@
+{
+  "name": "secretsdeploy",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node main.js"
+  },
+  "dependencies": {
+    "@actions/core": "^1.2.2",
+    "express": "^4.17.1"
+  }
+}

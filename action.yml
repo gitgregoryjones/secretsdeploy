@@ -2,14 +2,15 @@ name: Secrets Deploy
 author: gitgregoryjones 
 description: Build,Push a docker image to Amazon ECR (create if not found), Create Task Definition, Push ENV variables from ASM and restart ECS service
 inputs:
-  access-key-id:
+  access_key_id:
     description: Access key for IAM User.
-  secret-access-key:
+  secret_access_key:
     description: Secret access key for IAM User.
-  project-name:
+  project_name:
     description: The name of this project will be used as ECR repository created/updated
+    required: true
   stage:
-    description: Will be used to read secrets from {project-name}-{stage} Secrets Manager path [dev,stage,prod,etc] and pushed to container ENV
+    description: Default-> prod will be used to read secrets from {project-name}-{stage} Secrets Manager path [dev,stage,prod,etc] and pushed to container ENV
     required: false
   region:
     description: AWS Region to use.  Defaults to us-east-2.
