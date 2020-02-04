@@ -2,9 +2,9 @@ name: Secrets Deploy
 author: gitgregoryjones 
 description: Build,Push a docker image to Amazon ECR (create if not found), Create Task Definition, Push ENV variables from ASM and restart ECS service
 inputs:
-  access_key_id:
+  AWS_ACCESS_KEY_ID:
     description: Access key for IAM User.
-  secret_access_key:
+  AWS_SECRET_ACCESS_KEY:
     description: Secret access key for IAM User.
   project_name:
     description: The name of this project will be used as ECR repository created/updated
