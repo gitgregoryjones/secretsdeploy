@@ -8,6 +8,9 @@ const stage = core.getInput('stage') || "prod";
 const awsRegion = core.getInput('region') || 'us-east-2';
 
 
+const AWS_DEFAULT_REGION = awsRegion;
+
+
 function run(cmd, options = {}) {
     if (!options.hide) {
         console.log(`$ ${cmd}`);
@@ -19,6 +22,7 @@ function run(cmd, options = {}) {
             ...process.env,
             AWS_ACCESS_KEY_ID,
             AWS_SECRET_ACCESS_KEY,
+            AWS_DEFAULT_REGION
         },
     });
 }
