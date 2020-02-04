@@ -41,6 +41,7 @@ run(`docker tag "${stack_name}-repo:latest" "${awsAccountId}.dkr.ecr.${awsRegion
 run(`docker push "${awsAccountId}.dkr.ecr.${awsRegion}.amazonaws.com/${stack_name}-repo:latest"  `,{hide:true});
 
 console.log("AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service ");
+console.log(`USING REGION ${AWS_DEFAULT_REGION}`);
 const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stack_name}-family`));
 const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`);
 const secretString = JSON.parse(secretDefinition).SecretString;
