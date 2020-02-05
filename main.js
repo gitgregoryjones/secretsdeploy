@@ -4,7 +4,7 @@ const core = require('@actions/core');
 const AWS_ACCESS_KEY_ID = core.getInput('AWS_ACCESS_KEY_ID', { required: true });
 const AWS_SECRET_ACCESS_KEY = core.getInput('AWS_SECRET_ACCESS_KEY', { required: true });
 const stack_name = core.getInput('project_name', { required: true });
-const stage = core.getInput('stage') || "prod";
+var stage = core.getInput('stage');
 const awsRegion = core.getInput('region') || 'us-east-2';
 
 
@@ -27,6 +27,21 @@ function run(cmd, options = {}) {
     });
 }
 
+
+
+console.log("Trying to get git branch stage");
+var branch = run(`git branch | grep "*" | sed "s/\*\s*//g"`).trim();
+
+
+if(stage != "" && stage != undefined){
+    branch = stage;
+} else {
+    stage = branch;
+}
+
+
+console.log(`Stage is ${branch}`)
+
 console.log("-Building Dockerfile")
 run(`docker build -f Dockerfile -t "${stack_name}-repo" .`);
 
@@ -41,9 +56,9 @@ run(`docker tag "${stack_name}-repo:latest" "${awsAccountId}.dkr.ecr.${awsRegion
 run(`docker push "${awsAccountId}.dkr.ecr.${awsRegion}.amazonaws.com/${stack_name}-repo:latest"  `,{hide:true});
 
 console.log("AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service ");
-console.log(`USING REGION ${AWS_DEFAULT_REGION}`);
+console.log(`REGION Version set to ${AWS_DEFAULT_REGION}`);
 const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stack_name}-family`));
-const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`);
+const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${branch}/${stack_name}`);
 const secretString = JSON.parse(secretDefinition).SecretString;
 const secretJSON = JSON.parse(secretString);
 //console.log(secretJSON);
