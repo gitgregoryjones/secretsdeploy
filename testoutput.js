@@ -4,7 +4,8 @@ const express = require('express');
 const app = express().use(express.json());
 
 app.get('/',function(req,res){
-	res.end("I'm alive");
+	let rando = Math.random().toString(10).substring(2, 9) + Math.random().toString(10).substring(2, 9);
+	res.end(`I'm alive...random ${rando}`);
 })
 
 
