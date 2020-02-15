@@ -49,7 +49,7 @@ let repoString = `${stage}-${stack_name}-repo`;
 console.log(`Stage is ${branch}`)
 
 console.log("-Building Dockerfile")
-run(`docker build -f Dockerfile -t "${repoString}" .`);
+run(`docker build -f Dockerfile -t "${repoString}" . --build-arg environment=${branch}`);
 
 console.log("AWS GET Account, Login And Upload To ECR");
 

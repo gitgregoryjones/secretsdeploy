@@ -1,5 +1,8 @@
 FROM node:12.2.0-alpine
 
+
+ARG environment
+
 # Create app directory
 WORKDIR /usr/src/app
 
