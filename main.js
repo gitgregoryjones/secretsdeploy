@@ -1,4 +1,5 @@
     const { execSync } = require('child_process');
+    const fs = require('fs')
 const core = require('@actions/core');
 
 const AWS_ACCESS_KEY_ID = core.getInput('AWS_ACCESS_KEY_ID', { required: true });
@@ -29,9 +30,11 @@ function run(cmd, options = {}) {
 
 
 
+
 console.log("Trying to get git branch stage");
 var branch = run(`git branch | grep "*" | sed "s/\*\s*//g"`).trim();
 
+let extension = ".nonprod";
 
 if(stage != "" && stage != undefined){
     branch = stage;
@@ -42,14 +45,31 @@ if(stage != "" && stage != undefined){
 if(stage == 'master'){
     console.log("Staging branch gets deployed to production cluster");
     stage = 'production';
+    extension = "";
+} 
+
+//Does override docker file exist.  If not default to regular
+try {
+   console.log(`Looking for docker override file Dockerile${extension}`); 
+  if (fs.existsSync(`Dockerfile${extension}`)) {
+    console.log(`Will build docker image using file Dockerile${extension}`);
+    //file exists
+  } else {
+    console.error(`Dockerile${extension} does not exist...defaulting to regular Dockerile`);
+    extension = "";
+  }
+} catch(err) {
+  console.error(err);
 }
+
+
 
 let repoString = `${stage}-${stack_name}-repo`;
 
-console.log(`Stage is ${branch}`)
+console.log(`Stage is ${branch} and Dockerile is Dockerfile${extension}`);
 
 console.log("-Building Dockerfile")
-run(`docker build -f Dockerfile -t "${repoString}" . --build-arg environment=${branch}`);
+run(`docker build -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
 
 console.log("AWS GET Account, Login And Upload To ECR");
 
