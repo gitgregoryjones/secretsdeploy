@@ -1,5 +1,5 @@
 # Secrets Deploy
-This action creates a build using your Dockerfile, pushes build to ECR, pulls secrets (if available) for your project, restarts the ECS service with a new task definition and pushes your secrets to the running tasks.
+This action creates a build using your project's Dockerfile, pushes build to ECR, pulls secrets (if available) for your project, restarts the ECS service with a new task definition and pushes your secrets to the running tasks.
 
 <img src="process.png" width="100%" style="padding: 0 15px; float: left;">
 
@@ -13,8 +13,9 @@ AmazonEC2ContainerRegistryFullAccess policy,etc).
 - ECR: {production | non-production}-{project_name}-repo 
 - VPC: productionVPC or non-productionVPC
 - Cluster: {production | non-production}-{project_name}-cluster
-- Service: {prodcution | non-production}-{project_name}-service
-- Task Defintion: {prodcution | non-production}-{project_name}-family:{revison-number}
+- Service: {production | non-production}-{project_name}-service
+- Task Defintion: {produution | non-production}-{project_name}-family:{revison-number}
+- Secrets Manager: {production | non-production }/{project-name}  (optional)
 
 ### OR Have all this done automatically by:
 - git clone https://github.com/turnercode/inthearena-iac
