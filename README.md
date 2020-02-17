@@ -14,7 +14,7 @@ AmazonEC2ContainerRegistryFullAccess policy,etc).
 - VPC: productionVPC or non-productionVPC
 - Cluster: {production | non-production}-{project_name}-cluster
 - Service: {production | non-production}-{project_name}-service
-- Task Defintion: {produution | non-production}-{project_name}-family:{revison-number}
+- Task Defintion: {production | non-production}-{project_name}-family:{revison-number}
 - Secrets Manager: {production | non-production }/{project-name}  (optional)
 
 ### OR Have all this done automatically by:
