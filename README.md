@@ -1,7 +1,7 @@
 # Secrets Deploy
 This action creates a build using your Dockerfile, pushes build to ECR, pulls secrets (if available) for your project, restarts the ECS service with a new task definition and pushes your secrets to the running tasks.
 
-<img src="process.png" width="250" style="padding: 0 15px; float: left;">
+<img src="process.png" height="800" style="padding: 0 15px; float: left;">
 
 
 ## setup
