@@ -15,6 +15,9 @@ inputs:
   region:
     description: AWS Region to use.  Defaults to us-east-2.
     required: false
+  global_region:
+    description: (default us-east-1) AWS Region used for services we want to treat as global.  Currently Secrets Manager
+    required: false 
 runs:
   using: node12
   main: 'main.js'
