@@ -81,6 +81,14 @@ let repoString = `${stage}-${stack_name}-repo`;
 console.log(`Stage is ${branch} and Dockerile is Dockerfile${extension}`);
 
 console.log("-Building Dockerfile")
+
+
+ if(slackHookUrl != "" && slackHookUrl != undefined){
+
+            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Building ${stage}-${stack_name}-service...this may take a while"}'`,{hide:true});
+ }
+
+
 run(`docker build -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
 
 console.log("AWS GET Account, Login And Upload To ECR");
@@ -100,7 +108,7 @@ regions.forEach(function(region){
 
         if(slackHookUrl != "" && slackHookUrl != undefined){
 
-            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Building and deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
+            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
         }
 
 
