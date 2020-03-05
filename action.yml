@@ -18,6 +18,9 @@ inputs:
   global_region:
     description: (default us-east-1) AWS Region used for services we want to treat as global.  Currently Secrets Manager
     required: false 
+  slack_hook_url:
+    description: Notifications will be sent to this Slack Hook if provided
+    required: false
 runs:
   using: node12
   main: 'main.js'

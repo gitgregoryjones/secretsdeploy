@@ -28,12 +28,16 @@ AmazonEC2ContainerRegistryFullAccess policy,etc).
 - `AWS_SECRET_ACCESS_KEY`
 
 ## inputs
-
+### required
 - `AWS_ACCESS_KEY_ID` - Your IAM user's AWS access key ID.
 - `AWS_SECRET_ACCESS_KEY` - Your IAM user's AWS secret key.
 - `region` - The ECR region to upload to. Defaults to 'us-east-2'.
-- `project_name` - The name of this project.
+- `project_name` - The name of this project. 
 - `stage` - which branch triggered the build...use ${{ steps.extract_branch.outputs.branch }}
+
+### optional
+- `global_region` - (default us-east-1) AWS Region used for services we want to treat as global. Currently Secrets Manager
+- `slack_hook_url` - Notifications will be sent to this Slack Hook if provided
 
 ## build,deploy,restart service
 
