@@ -18,7 +18,7 @@ AmazonEC2ContainerRegistryFullAccess policy,etc).
 - Secrets Manager: {production | non-production }/{project-name}  (optional)
 
 ### OR Have all this done automatically by:
-- git clone https://github.com/turnercode/inthearena-iac
+- git clone https://github.com/turnercode/inthearena-iac/fargate
 - cdk deploy --c project-name={project-name} --c environment={production | ..any branch name }
 
 
