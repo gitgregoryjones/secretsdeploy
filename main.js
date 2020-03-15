@@ -46,18 +46,25 @@ function run(cmd, options = {}) {
 console.log("Trying to get git branch stage");
 var branch = run(`git branch | grep "*" | sed "s/\*\s*//g"`).trim();
 
-let extension = ".nonprod";
+var info_branch = branch;
 
-if(branch.startsWith("QAv")){
-    console.log(`Converting Git Repo Branch [${branch}] to deployment location [qa]`);
-    branch = "qa";
-}
+console.log(`read branch as [${branch}]`);
+
+let extension = ".nonprod";
 
 if(stage != "" && stage != undefined){
     branch = stage;
 } else {
     stage = branch;
 }
+
+if(stage.startsWith("QAv")){
+    console.log(`Converting Git Repo Branch [${branch}] to deployment location [qa]`);
+    branch = "qa";
+
+    stage = "qa";
+}
+
 
 if(stage == 'master'){
     console.log("Master branch gets deployed to production cluster");
@@ -87,10 +94,12 @@ console.log(`Stage is ${branch} and Dockerile is Dockerfile${extension}`);
 
 console.log("-Building Dockerfile")
 
+console.log(`Building ${info_branch} ->  ${stage}-${stack_name}-service...this may take a while`);
+
 
  if(slackHookUrl != "" && slackHookUrl != undefined){
 
-            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Building ${stage}-${stack_name}-service...this may take a while"}'`,{hide:true});
+            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Building ${info_branch} ->  ${stage}-${stack_name}-service...this may take a while"}'`,{hide:true});
  }
 
 
