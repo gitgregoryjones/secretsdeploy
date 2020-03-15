@@ -48,6 +48,11 @@ var branch = run(`git branch | grep "*" | sed "s/\*\s*//g"`).trim();
 
 let extension = ".nonprod";
 
+if(branch.startsWith("QAv")){
+    console.log(`Converting Git Repo Branch [${branch}] to deployment location [qa]`);
+    branch = "qa";
+}
+
 if(stage != "" && stage != undefined){
     branch = stage;
 } else {
