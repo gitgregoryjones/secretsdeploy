@@ -46,7 +46,7 @@ function run(cmd, options = {}) {
 console.log("Trying to get git branch stage");
 var branch = run(`git branch | grep "*" | sed "s/\*\s*//g"`).trim();
 
-var info_branch = branch;
+var info_branch = stage;
 
 console.log(`read branch as [${branch}]`);
 
