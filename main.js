@@ -59,14 +59,20 @@ if(stage != "" && stage != undefined){
 }
 
 if(stage.startsWith("QAv")){
+    
     console.log(`Converting Git Repo Branch [${branch}] to deployment location [qa]`);
     branch = "qa";
 
     stage = "qa";
-}
 
+} else if(stage.endsWith("-stage")){
 
-if(stage == 'master'){
+    console.log(`Converting Git Repo Branch [${branch}] to deployment location [staging]`);
+
+    branch = "staging";
+    stage = "staging";
+
+} else if(stage == 'master'){
     console.log("Master branch gets deployed to production cluster");
     stage = 'production';
     extension = "";
