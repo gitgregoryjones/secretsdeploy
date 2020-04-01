@@ -65,7 +65,7 @@ if(stage.startsWith("QAv")){
 
     stage = "qa";
 
-} else if(stage.endsWith("-stage")){
+} else if(stage.startsWith("staging-v")){
 
     console.log(`Converting Git Repo Branch [${branch}] to deployment location [staging]`);
 
