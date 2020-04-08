@@ -7,7 +7,7 @@ const AWS_SECRET_ACCESS_KEY = core.getInput('AWS_SECRET_ACCESS_KEY', { required:
 const stack_name = core.getInput('project_name', { required: true });
 const slackHookUrl = core.getInput('SLACK_HOOK_URL');
 
-var stage = core.getInput('stage');
+var stage = core.getInput('stage',{required: true});
 
 const globalRegion = core.getInput('GLOBAL_REGION') || 'us-east-1';
 
@@ -43,20 +43,13 @@ function run(cmd, options = {}) {
 
 
 
-console.log("Trying to get git branch stage");
-var branch = run(`git branch | grep "*" | sed "s/\*\s*//g"`).trim();
+console.log(`Trying to determine if we should normalize ${stage}`);
 
 var info_branch = stage;
 
-console.log(`read branch as [${branch}]`);
-
 let extension = ".nonprod";
 
-if(stage != "" && stage != undefined){
-    branch = stage;
-} else {
-    stage = branch;
-}
+branch = stage;
 
 if(stage.startsWith("QAv")){
     
@@ -147,18 +140,63 @@ regions.forEach(function(region){
         const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region}));
 
         try {
+            console.log(`Attempting to retrieve default secrets from default region ${globalRegion}`);
+
+             let defaultsSecretDefinition;
+
+             let defaultContainerEnv = [];
+
+             let keys = [];
+             let newEnv = [];
+
+
+            try {
+
+                defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion});
+
+                const defaultSecretString = JSON.parse(defaultsSecretDefinition).SecretString;
+
+                const defaultSecretJSON = JSON.parse(defaultSecretString);
+
+                defaultContainerEnv = Object.keys(defaultSecretJSON).map(function(key){b = {name:key, value:defaultSecretJSON[key]};   return b;  });
+
+                //console.log(`Default Container Env for ${stack_name} is ${JSON.stringify(defaultContainerEnv)}`)
+
+                //Temporarily copy default env to task def in case user did not specify 
+                //secrets for the specified env
+                oldTask.taskDefinition.containerDefinitions.forEach(function(containerDefs){
+                    containerDefs.environment= defaultContainerEnv;
+                })
+
+            }catch (e){
+                console.log(`info: default Secrets default/${stack_name} Definition was not set`); 
+            }
+
             console.log(`Attempting to retrieve secrets from default region ${globalRegion}`);
             
             const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion});
             const secretString = JSON.parse(secretDefinition).SecretString;
             const secretJSON = JSON.parse(secretString);
             //console.log(secretJSON);
-            const containerEnv = Object.keys(secretJSON).map(function(key){b = {name:key, value:secretJSON[key]};   return b;  });
+            let containerEnv = Object.keys(secretJSON).map(function(key){b = {name:key, value:secretJSON[key]};   return b;  });
+
+            console.log(`Back from ${stage}/${stack_name} secrets manager. Read ${containerEnv.length} secrets`);
+
+            console.log(`Merging Defaults with ${stage} secrets since user provided ${stage}/${stack_name} secret vars`);
+            
+            const mergeArr = containerEnv.concat(defaultContainerEnv);
+
+            mergeArr.forEach(obj=> {if(keys.indexOf(obj.name) == -1){keys.push(obj.name);newEnv.push(obj);}else{console.log(`key ${obj.name} was found`);}})
+
+            //console.log("Merged Container is ");
+            //console.log(JSON.stringify(newEnv));
+
             //console.log(containerEnv);
             console.log("Creating new task by overwriting task def environment section");
             oldTask.taskDefinition.containerDefinitions.forEach(function(containerDefs){
-                containerDefs.environment= containerEnv;
+                containerDefs.environment= newEnv;
             })
+
         }catch(exception){
             console.log(`Not deploying secrets.  Did you remember to set ${stage}/${stack_name} in Secrets Manager?`);
         }

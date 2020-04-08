@@ -10,8 +10,8 @@ inputs:
     description: The name of this project will be used as ECR repository created/updated
     required: true
   stage:
-    description: Default-> prod will be used to read secrets from {project-name}-{stage} Secrets Manager path [dev,stage,prod,etc] and pushed to container ENV
-    required: false
+    description: Will be used to read secrets from {project-name}-{stage} Secrets Manager path [development,staging,production,etc] and pushed to container ENV
+    required: true
   region:
     description: AWS Region to use.  Defaults to us-east-2.
     required: false
