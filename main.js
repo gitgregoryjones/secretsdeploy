@@ -117,106 +117,131 @@ regions.forEach(function(region){
 
     region = region.trim();
 
-    try {
+    let serviceFound = false;
+   
+    try { 
+        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service"`,{region:region});
+        
+        serviceDefinitionTest = JSON.parse(sdString);
 
-        if(slackHookUrl != "" && slackHookUrl != undefined){
+        if(serviceDefinitionTest.services.length > 0){
+            serviceFound = true;
+            if(slackHookUrl != "" && slackHookUrl != undefined){
+
+                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
+            }
+        }
+
+    }catch(err){
+      if(slackHookUrl != "" && slackHookUrl != undefined){
 
             run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
-        }
+        }  
+    }
+
+    try {
+        
+        if(serviceFound){
 
 
-        console.log(`Tagging and Pushing image to ${region}`);
+            console.log(`Tagging and Pushing image to ${region}`);
 
-        run(`$(aws ecr get-login --no-include-email --region ${region})`);
-        const accountData = run(`aws sts get-caller-identity --output json`);
-        const awsAccountId = JSON.parse(accountData).Account;
+            run(`$(aws ecr get-login --no-include-email --region ${region})`);
+            const accountData = run(`aws sts get-caller-identity --output json`);
+            const awsAccountId = JSON.parse(accountData).Account;
 
-        console.log(`Pushing local image ${repoString}:latest to xxxxxxxx.dkr.ecr.${region}.amazonaws.com/${repoString}:latest`);
-        run(`docker tag "${repoString}:latest" "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"`,{hide:true,region:region});
-        run(`docker push "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"  `,{hide:true, region:region});
+            console.log(`Pushing local image ${repoString}:latest to xxxxxxxx.dkr.ecr.${region}.amazonaws.com/${repoString}:latest`);
+            run(`docker tag "${repoString}:latest" "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"`,{hide:true,region:region});
+            run(`docker push "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"  `,{hide:true, region:region});
 
-        console.log("AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service ");
-        console.log(`REGION Version set to ${AWS_DEFAULT_REGION}`);
-        const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region}));
-
-        try {
-            console.log(`Attempting to retrieve default secrets from default region ${globalRegion}`);
-
-             let defaultsSecretDefinition;
-
-             let defaultContainerEnv = [];
-
-             let keys = [];
-             let newEnv = [];
-
+            console.log("AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service ");
+            console.log(`REGION Version set to ${AWS_DEFAULT_REGION}`);
+            const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region}));
 
             try {
+                console.log(`Attempting to retrieve default secrets from default region ${globalRegion}`);
 
-                defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion});
+                 let defaultsSecretDefinition;
 
-                const defaultSecretString = JSON.parse(defaultsSecretDefinition).SecretString;
+                 let defaultContainerEnv = [];
 
-                const defaultSecretJSON = JSON.parse(defaultSecretString);
+                 let keys = [];
+                 let newEnv = [];
 
-                defaultContainerEnv = Object.keys(defaultSecretJSON).map(function(key){b = {name:key, value:defaultSecretJSON[key]};   return b;  });
 
-                //console.log(`Default Container Env for ${stack_name} is ${JSON.stringify(defaultContainerEnv)}`)
+                try {
 
-                //Temporarily copy default env to task def in case user did not specify 
-                //secrets for the specified env
+                    defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion});
+
+                    const defaultSecretString = JSON.parse(defaultsSecretDefinition).SecretString;
+
+                    const defaultSecretJSON = JSON.parse(defaultSecretString);
+
+                    defaultContainerEnv = Object.keys(defaultSecretJSON).map(function(key){b = {name:key, value:defaultSecretJSON[key]};   return b;  });
+
+                    //console.log(`Default Container Env for ${stack_name} is ${JSON.stringify(defaultContainerEnv)}`)
+
+                    //Temporarily copy default env to task def in case user did not specify 
+                    //secrets for the specified env
+                    oldTask.taskDefinition.containerDefinitions.forEach(function(containerDefs){
+                        containerDefs.environment= defaultContainerEnv;
+                    })
+
+                }catch (e){
+                    console.log(`info: default Secrets default/${stack_name} Definition was not set`); 
+                }
+
+                console.log(`Attempting to retrieve secrets from default region ${globalRegion}`);
+                
+                const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion});
+                const secretString = JSON.parse(secretDefinition).SecretString;
+                const secretJSON = JSON.parse(secretString);
+                //console.log(secretJSON);
+                let containerEnv = Object.keys(secretJSON).map(function(key){b = {name:key, value:secretJSON[key]};   return b;  });
+
+                console.log(`Back from ${stage}/${stack_name} secrets manager. Read ${containerEnv.length} secrets`);
+
+                console.log(`Merging Defaults with ${stage} secrets since user provided ${stage}/${stack_name} secret vars`);
+                
+                const mergeArr = containerEnv.concat(defaultContainerEnv);
+
+                mergeArr.forEach(obj=> {if(keys.indexOf(obj.name) == -1){keys.push(obj.name);newEnv.push(obj);}else{console.log(`key ${obj.name} was found`);}})
+
+                //console.log("Merged Container is ");
+                //console.log(JSON.stringify(newEnv));
+
+                //console.log(containerEnv);
+                console.log("Creating new task by overwriting task def environment section");
                 oldTask.taskDefinition.containerDefinitions.forEach(function(containerDefs){
-                    containerDefs.environment= defaultContainerEnv;
+                    containerDefs.environment= newEnv;
                 })
 
-            }catch (e){
-                console.log(`info: default Secrets default/${stack_name} Definition was not set`); 
+            }catch(exception){
+                console.log(`Not deploying secrets.  Did you remember to set ${stage}/${stack_name} in Secrets Manager?`);
             }
+            console.log("Clean up Task Definition...remove unneeded attributes");
+            delete oldTask.taskDefinition.taskDefinitionArn;
+            delete oldTask.taskDefinition.revision;
+            delete oldTask.taskDefinition.status;
+            delete oldTask.taskDefinition.requiresAttributes;
+            delete oldTask.taskDefinition.compatibilities;
+            //console.log(oldTask);
+            console.log("Registering the new task definition");
+            newTask = oldTask.taskDefinition;
+            const revisionString = run(`aws ecs register-task-definition --region "${region}" --cli-input-json '${JSON.stringify(newTask)}'`,{hide:true,region:region});
+            const revision_number = JSON.parse(revisionString).taskDefinition.revision;
+            console.log(`New Revision is ${JSON.parse(revisionString).taskDefinition.revision}`);
+            console.log(`Updating and restarting cluser ${stage}-${stack_name}-cluster and service ${stage}-${stack_name}-service with task ${stage}-${stack_name}-family:${revision_number}`);
+            run(`aws ecs update-service --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" --force-new-deployment --task-definition ${stage}-${stack_name}-family:${revision_number}`,{region:region});
 
-            console.log(`Attempting to retrieve secrets from default region ${globalRegion}`);
-            
-            const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion});
-            const secretString = JSON.parse(secretDefinition).SecretString;
-            const secretJSON = JSON.parse(secretString);
-            //console.log(secretJSON);
-            let containerEnv = Object.keys(secretJSON).map(function(key){b = {name:key, value:secretJSON[key]};   return b;  });
-
-            console.log(`Back from ${stage}/${stack_name} secrets manager. Read ${containerEnv.length} secrets`);
-
-            console.log(`Merging Defaults with ${stage} secrets since user provided ${stage}/${stack_name} secret vars`);
-            
-            const mergeArr = containerEnv.concat(defaultContainerEnv);
-
-            mergeArr.forEach(obj=> {if(keys.indexOf(obj.name) == -1){keys.push(obj.name);newEnv.push(obj);}else{console.log(`key ${obj.name} was found`);}})
-
-            //console.log("Merged Container is ");
-            //console.log(JSON.stringify(newEnv));
-
-            //console.log(containerEnv);
-            console.log("Creating new task by overwriting task def environment section");
-            oldTask.taskDefinition.containerDefinitions.forEach(function(containerDefs){
-                containerDefs.environment= newEnv;
-            })
-
-        }catch(exception){
-            console.log(`Not deploying secrets.  Did you remember to set ${stage}/${stack_name} in Secrets Manager?`);
-        }
-        console.log("Clean up Task Definition...remove unneeded attributes");
-        delete oldTask.taskDefinition.taskDefinitionArn;
-        delete oldTask.taskDefinition.revision;
-        delete oldTask.taskDefinition.status;
-        delete oldTask.taskDefinition.requiresAttributes;
-        delete oldTask.taskDefinition.compatibilities;
-        //console.log(oldTask);
-        console.log("Registering the new task definition");
-        newTask = oldTask.taskDefinition;
-        const revisionString = run(`aws ecs register-task-definition --region "${region}" --cli-input-json '${JSON.stringify(newTask)}'`,{hide:true,region:region});
-        const revision_number = JSON.parse(revisionString).taskDefinition.revision;
-        console.log(`New Revision is ${JSON.parse(revisionString).taskDefinition.revision}`);
-        console.log(`Updating and restarting cluser ${stage}-${stack_name}-cluster and service ${stage}-${stack_name}-service with task ${stage}-${stack_name}-family:${revision_number}`);
-        run(`aws ecs update-service --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" --force-new-deployment --task-definition ${stage}-${stack_name}-family:${revision_number}`,{region:region});
-
-        if(slackHookUrl != "" && slackHookUrl != undefined){
-            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Restarting ${stage}-${stack_name}-service in region ${region}.  Check the site in 5 minutes"}'`,{hide:true})
+            if(slackHookUrl != "" && slackHookUrl != undefined){
+                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Restarting ${stage}-${stack_name}-service in region ${region}.  Check the site in 5 minutes"}'`,{hide:true})
+            }
+        } else {
+            console.log(`Short Circuiting: Skipping deployment of ${stage}-${stack_name}-service in region ${region} since infrastructure does not exist in that region `);
+            if(slackHookUrl != "" && slackHookUrl != undefined){
+                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Skipping deployment of ${stage}-${stack_name}-service in region ${region} since infrastructure does not exist in that region"}'`,{hide:true})
+            }
         }
 
     }catch (e){
