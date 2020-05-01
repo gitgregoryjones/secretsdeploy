@@ -105,7 +105,7 @@ if(credentials_json != null){
             AWS_ACCESS_KEY_ID = account.AWS_ACCESS_KEY_ID;
             AWS_SECRET_ACCESS_KEY = account.AWS_SECRET_ACCESS_KEY;
             console.log(`Found Account`)
-            console.log(account);
+            console.log(account.AWS_ACCESS_KEY_ID);
         }
     }catch(err){
         console.log(err)
