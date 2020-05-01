@@ -39,6 +39,16 @@ AmazonEC2ContainerRegistryFullAccess policy,etc).
 ### optional
 - `global_region` - (default us-east-1) AWS Region used for services we want to treat as global. Currently Secrets Manager
 - `slack_hook_url` - Notifications will be sent to this Slack Hook if provided
+- `CREDENTIALS_JSON` - deploy to AWS accounts based on branch (environment) name. JSON body must be in the format below. NOTE: "production" equals your master branch.  EITHER CREDENTIALS_JSON or combination of AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY inputs must be provided
+```code
+    Example json:
+    {
+    "qa":{"AWS_ACCESS_KEY_ID":"iam-id","AWS_SECRET_ACCESS_KEY":"iam-access-key"},
+    "development":{"AWS_ACCESS_KEY_ID":"iam-id","AWS_SECRET_ACCESS_KEY":"iam-access-key"},
+    "production":{"AWS_ACCESS_KEY_ID":"iam-id","AWS_SECRET_ACCESS_KEY":"iam-access-key"},
+    "any branch name":{"AWS_ACCESS_KEY_ID":"iam-id","AWS_SECRET_ACCESS_KEY":"iam-access-key"}
+    }
+```
 
 ## build,deploy,restart service
 
@@ -52,6 +62,7 @@ on:
             - master
             - staging
             - development
+            - QAv*
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -60,7 +71,7 @@ jobs:
     - name: Extract branch name
       run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
       id: extract_branch
-    - uses: gitgregoryjones/secretsdeploy
+    - uses: gitgregoryjones/secretsdeploy@v18
       with:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
