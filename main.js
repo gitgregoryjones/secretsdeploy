@@ -202,7 +202,7 @@ regions.forEach(function(region){
             const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region}));
 
             try {
-                console.log(`Attempting to retrieve default secrets from default region ${globalRegion}`);
+                console.log(`Attempting to retrieve default secrets from global region ${globalRegion}`);
 
                  let defaultsSecretDefinition;
 
@@ -234,7 +234,7 @@ regions.forEach(function(region){
                     console.log(`info: default Secrets default/${stack_name} Definition was not set`); 
                 }
 
-                console.log(`Attempting to retrieve secrets from default region ${globalRegion}`);
+                console.log(`Attempting to retrieve ${stage}/${stack_name} secrets from global region ${globalRegion}`);
                 
                 const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion});
                 const secretString = JSON.parse(secretDefinition).SecretString;
@@ -260,7 +260,7 @@ regions.forEach(function(region){
                 })
 
             }catch(exception){
-                console.log(`Not deploying secrets.  Did you remember to set ${stage}/${stack_name} in Secrets Manager?`);
+                console.log(`${stage}/${stack_name} secrets not found..using default/${stack_name} secrets. Did you remember to set ${stage}/${stack_name} in ${globalRegion} Secrets Manager?`);
             }
             console.log("Clean up Task Definition...remove unneeded attributes");
             delete oldTask.taskDefinition.taskDefinitionArn;
