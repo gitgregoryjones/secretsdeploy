@@ -1,9 +1,9 @@
-    const { execSync } = require('child_process');
-    const fs = require('fs')
+const { execSync } = require('child_process');
+const fs = require('fs')
 const core = require('@actions/core');
 
-const AWS_ACCESS_KEY_ID = core.getInput('AWS_ACCESS_KEY_ID', { required: true });
-const AWS_SECRET_ACCESS_KEY = core.getInput('AWS_SECRET_ACCESS_KEY', { required: true });
+const AWS_ACCESS_KEY_ID = core.getInput('AWS_ACCESS_KEY_ID', { required: false });
+const AWS_SECRET_ACCESS_KEY = core.getInput('AWS_SECRET_ACCESS_KEY', { required: false });
 const stack_name = core.getInput('project_name', { required: true });
 const slackHookUrl = core.getInput('SLACK_HOOK_URL');
 
@@ -12,6 +12,8 @@ var stage = core.getInput('stage',{required: true});
 const globalRegion = core.getInput('GLOBAL_REGION') || 'us-east-1';
 
 const regionString = core.getInput('region') || 'us-east-2';
+
+const credentials_json = core.getInput('CREDENTIALS_JSON',{required:true});
 
 const regions = regionString.split(",");
 
@@ -41,8 +43,6 @@ function run(cmd, options = {}) {
 }
 
 
-
-
 console.log(`Trying to determine if we should normalize ${stage}`);
 
 var info_branch = stage;
@@ -51,7 +51,7 @@ let extension = ".nonprod";
 
 branch = stage;
 
-if(stage.startsWith("QAv")){
+if(stage.startsWith("QAv") || stage == 'qa'){
     
     console.log(`Converting Git Repo Branch [${branch}] to deployment location [qa]`);
     branch = "qa";
@@ -69,7 +69,30 @@ if(stage.startsWith("QAv")){
     console.log("Master branch gets deployed to production cluster");
     stage = 'production';
     extension = "";
-} 
+}  else {
+    console.log("Defaulting to development branch");
+    stage = "development";
+    branch = "development";
+}
+
+//console.log(`Credentials json is ${credentials_json}`);
+
+let credentials = {};
+
+if(credentials_json != null){
+    try {
+        console.log(`Inspecting credentials for stage ${stage}`);
+        credentials = JSON.parse(credentials_json);
+        if(!credentials.hasOwnProperty(stage)){
+            throw(`Missing credentials for environment ${stage}`);
+       
+        }
+    }catch(err){
+        console.log(err)
+        throw(`AWS Credentials must be in the format {"${stage}":{"AWS_ACCESS_KEY_ID":"iam-id","AWS_SECRET_ACCESS_KEY":"iam-access-key"},"development":{"AWS_ACCESS_KEY_ID":"iam-id","AWS_SECRET_ACCESS_KEY":"iam-access-key"}}`)
+        
+    }
+}
 
 //Does override docker file exist.  If not default to regular
 try {
