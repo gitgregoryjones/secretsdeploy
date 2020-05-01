@@ -1,10 +1,12 @@
 const { execSync } = require('child_process');
 const fs = require('fs')
 const core = require('@actions/core');
+var path = require('path');
 
-const AWS_ACCESS_KEY_ID = core.getInput('AWS_ACCESS_KEY_ID', { required: false });
-const AWS_SECRET_ACCESS_KEY = core.getInput('AWS_SECRET_ACCESS_KEY', { required: false });
-const stack_name = core.getInput('project_name', { required: true });
+
+let AWS_ACCESS_KEY_ID = core.getInput('AWS_ACCESS_KEY_ID', { required: false });
+let AWS_SECRET_ACCESS_KEY = core.getInput('AWS_SECRET_ACCESS_KEY', { required: false });
+let stack_name = core.getInput('project_name', { required: false });
 const slackHookUrl = core.getInput('SLACK_HOOK_URL');
 
 var stage = core.getInput('stage',{required: true});
@@ -20,6 +22,18 @@ const regions = regionString.split(",");
 
 let AWS_DEFAULT_REGION = regions[0];
 
+
+var myApp = path.dirname(require.main.filename);
+if(myApp.indexOf("/") > -1){
+    myApp = myApp.substring(myApp.lastIndexOf("/")+1);
+}
+
+console.log(`stack name is: ${stack_name}`)
+if(stack_name.length == 0){
+    stack_name = myApp;
+}
+
+console.log(`AWS stack prefix is ${stack_name}`);
 
 function run(cmd, options = {}) {
     if (!options.hide) {
@@ -58,7 +72,7 @@ if(stage.startsWith("QAv") || stage == 'qa'){
 
     stage = "qa";
 
-} else if(stage.startsWith("staging-v")){
+} else if(stage.startsWith("staging")){
 
     console.log(`Converting Git Repo Branch [${branch}] to deployment location [staging]`);
 
@@ -86,6 +100,12 @@ if(credentials_json != null){
         if(!credentials.hasOwnProperty(stage)){
             throw(`Missing credentials for environment ${stage}`);
        
+        } else {
+            let account = credentials[stage];
+            AWS_ACCESS_KEY_ID = account.AWS_ACCESS_KEY_ID;
+            AWS_SECRET_ACCESS_KEY = account.AWS_SECRET_ACCESS_KEY;
+            console.log(`Found Account`)
+            console.log(account);
         }
     }catch(err){
         console.log(err)
