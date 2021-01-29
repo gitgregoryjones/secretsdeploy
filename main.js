@@ -89,7 +89,7 @@ if(stage.startsWith("QAv") || stage == 'qa'){
     branch = "development";
 }
 
-//console.log(`Credentials json is ${credentials_json}`);
+console.log(`Credentials json is ${credentials_json}`);
 
 let credentials = {};
 
@@ -268,6 +268,10 @@ regions.forEach(function(region){
             delete oldTask.taskDefinition.status;
             delete oldTask.taskDefinition.requiresAttributes;
             delete oldTask.taskDefinition.compatibilities;
+            //Patch for https://github.com/aws/aws-cli/issues/5882
+            delete oldTask.taskDefinition.registeredBy;
+            delete oldTask.taskDefinition.registeredAt;
+            delete oldTask.taskDefinition.deregisteredAt;
             //console.log(oldTask);
             console.log("Registering the new task definition");
             newTask = oldTask.taskDefinition;
