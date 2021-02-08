@@ -5,7 +5,7 @@
     "build": "node main.js"
   },
   "dependencies": {
-    "@actions/core": "^1.2.2",
+    "@actions/core": "^1.2.6",
     "express": "^4.17.1"
   }
 }
