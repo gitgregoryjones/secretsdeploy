@@ -187,14 +187,14 @@ regions.forEach(function(region){
         if(serviceFound){
 
 
-            console.log(`Tagging and Pushing image to ${region}`);
+            console.log(`GTagging and Pushing image to ${region}`);
 
 
             //run(`oldpwd=$(aws ecr get-login-password --region ${region})`);
             const accountData = run(`aws sts get-caller-identity --output json`);
             const awsAccountId = JSON.parse(accountData).Account;
 
-            run(`aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${awsAccountId}.dkr.ecr.${region}.amazonaws.com`);
+            run(`aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${awsAccountId}.dkr.ecr.${region}.amazonaws.com`,{hide:true});
             
             console.log(`Pushing local image ${repoString}:latest to xxxxxxxx.dkr.ecr.${region}.amazonaws.com/${repoString}:latest`);
             run(`docker tag "${repoString}:latest" "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"`,{hide:true,region:region});
