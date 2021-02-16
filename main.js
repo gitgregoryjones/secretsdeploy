@@ -189,7 +189,7 @@ regions.forEach(function(region){
 
             console.log(`Tagging and Pushing image to ${region}`);
 
-            run(`$(aws ecr get-login --no-include-email --region ${region})`);
+            run(`$(aws ecr get-login-password --region ${region})`);
             const accountData = run(`aws sts get-caller-identity --output json`);
             const awsAccountId = JSON.parse(accountData).Account;
 
