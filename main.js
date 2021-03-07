@@ -79,7 +79,7 @@ if(stage.startsWith("QAv") || stage == 'qa'){
     branch = "staging";
     stage = "staging";
 
-} else if(stage == 'master'){
+} else if(stage == 'master' || stage == 'main'){
     console.log("Master branch gets deployed to production cluster");
     stage = 'production';
     extension = "";
