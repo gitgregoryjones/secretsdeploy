@@ -146,7 +146,7 @@ console.log(`Building ${info_branch} ->  ${stage}-${stack_name}-service...this m
  }
 
 
-run(`docker build -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
+run(`docker build --memory=8g -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
 
 console.log("AWS GET Account, Login And Upload To ECR");
 
