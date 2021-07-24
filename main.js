@@ -47,7 +47,7 @@ function run(cmd, options = {}) {
     return execSync(cmd, {
         shell: '/bin/bash',
         encoding: 'utf-8',
-        stdio: 'ignore',
+        stdio: ['ignore', 'ignore', 'pipe'],
         env: {
             ...process.env,
             AWS_ACCESS_KEY_ID,
@@ -135,6 +135,8 @@ let repoString = `${stage}-${stack_name}-repo`;
 
 console.log(`Stage is ${branch} and Dockerile is Dockerfile${extension}`);
 
+console.log(`Slack URL is defined as [${slackHookUrl}]  If it has a value, slack will be used`);
+
 console.log("-Building Dockerfile")
 
 console.log(`Building ${info_branch} ->  ${stage}-${stack_name}-service...this may take a while`);
@@ -172,14 +174,14 @@ regions.forEach(function(region){
             serviceFound = true;
             if(slackHookUrl != "" && slackHookUrl != undefined){
 
-                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
+                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:false});
             }
         }
 
     }catch(err){
       if(slackHookUrl != "" && slackHookUrl != undefined){
 
-            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
+            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:false});
         }  
     }
 
