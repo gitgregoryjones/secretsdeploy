@@ -47,7 +47,6 @@ function run(cmd, options = {}) {
     return execSync(cmd, {
         shell: '/bin/bash',
         encoding: 'utf-8',
-        stdio: ['ignore', 'pipe', 'pipe'],
         env: {
             ...process.env,
             AWS_ACCESS_KEY_ID,
@@ -135,8 +134,6 @@ let repoString = `${stage}-${stack_name}-repo`;
 
 console.log(`Stage is ${branch} and Dockerile is Dockerfile${extension}`);
 
-console.log(`Slack URL is defined as [${slackHookUrl}]  If it has a value, slack will be used`);
-
 console.log("-Building Dockerfile")
 
 console.log(`Building ${info_branch} ->  ${stage}-${stack_name}-service...this may take a while`);
@@ -148,7 +145,7 @@ console.log(`Building ${info_branch} ->  ${stage}-${stack_name}-service...this m
  }
 
 
-run(`docker build --memory=8g -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
+run(`docker build -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
 
 console.log("AWS GET Account, Login And Upload To ECR");
 
@@ -168,29 +165,21 @@ regions.forEach(function(region){
     try { 
         const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service"`,{region:region});
         
-        console.log(`sdString is ${sdString}`);
-
-
         serviceDefinitionTest = JSON.parse(sdString);
 
         if(serviceDefinitionTest.services.length > 0){
             serviceFound = true;
-            console.log(`Service Found is [${serviceFound}]`);
-            /*
             if(slackHookUrl != "" && slackHookUrl != undefined){
 
-                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:false});
-            }*/
+                run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
+            }
         }
 
     }catch(err){
-      console.log(`Err is [${err}]`);
-      /*
       if(slackHookUrl != "" && slackHookUrl != undefined){
 
-            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:false});
-        } 
-        */ 
+            run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
+        }  
     }
 
     try {
