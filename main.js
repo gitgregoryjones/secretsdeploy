@@ -172,17 +172,22 @@ regions.forEach(function(region){
 
         if(serviceDefinitionTest.services.length > 0){
             serviceFound = true;
+            console.log(`Service Found is [${serviceFound}]`);
+            /*
             if(slackHookUrl != "" && slackHookUrl != undefined){
 
                 run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:false});
-            }
+            }*/
         }
 
     }catch(err){
+      console.log(`Err is [${err}]`);
+      /*
       if(slackHookUrl != "" && slackHookUrl != undefined){
 
             run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:false});
-        }  
+        } 
+        */ 
     }
 
     try {
