@@ -168,6 +168,9 @@ regions.forEach(function(region){
     try { 
         const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service"`,{region:region});
         
+        console.log(`sdString is ${sdString}`);
+
+
         serviceDefinitionTest = JSON.parse(sdString);
 
         if(serviceDefinitionTest.services.length > 0){
