@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { execSync,spawnSync } = require('child_process');
 const fs = require('fs')
 const core = require('@actions/core');
 var path = require('path');
@@ -46,7 +46,11 @@ function run(cmd, options = {}) {
         AWS_DEFAULT_REGION = options.region;
     }
 
-    return execSync(cmd, {
+
+    //console.log(`cmd is ${cmd} and options.stdio is ${JSON.stringify(options.stdio)}`)
+
+    
+   execSync(cmd + ' |  tee ./output.txt', {
         shell: '/bin/bash',
         encoding: 'utf-8',
         stdio: options.stdio? options.stdio:  'pipe',
@@ -57,6 +61,12 @@ function run(cmd, options = {}) {
             AWS_DEFAULT_REGION
         },
     });
+    
+    r = fs.readFileSync('./output.txt');
+
+    return r;
+
+   
 }
 
 
@@ -148,7 +158,7 @@ console.log(`Building ${info_branch} ->  ${stage}-${stack_name}-service...this m
  }
 
 
-run(`docker build -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`);
+run(`docker build -f Dockerfile${extension} -t "${repoString}" . --build-arg environment=${branch}`,{stdio:[process.stdin, process.stdout, process.stderr]});
 
 console.log("AWS GET Account, Login And Upload To ECR");
 
@@ -166,7 +176,7 @@ regions.forEach(function(region){
     let serviceFound = false;
    
     try { 
-        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" | jq '.services | del(.[0].events) | del(.[0].deployments)'`,{region:region,stdio:[this.stdin, this.stdout, this.stderr]}).toString();
+        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" | jq '.services | del(.[0].events) | del(.[0].deployments)'`,{region:region,stdio:[process.stdin, process.stdout, process.stderr]})
 
         console.log(`I read ${sdString}`)
 
@@ -203,18 +213,18 @@ regions.forEach(function(region){
 
 
             //run(`oldpwd=$(aws ecr get-login-password --region ${region})`);
-            const accountData = run(`aws sts get-caller-identity --output json`,{region:region,stdio:[this.stdin, this.stdout, this.stderr]});
+            const accountData = run(`aws sts get-caller-identity --output json`,{region:region,stdio:[process.stdin, process.stdout, process.stderr]});
             const awsAccountId = JSON.parse(accountData).Account;
 
             run(`aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${awsAccountId}.dkr.ecr.${region}.amazonaws.com`,{hide:true});
             
             console.log(`Pushing local image ${repoString}:latest to xxxxxxxx.dkr.ecr.${region}.amazonaws.com/${repoString}:latest`);
-            run(`docker tag "${repoString}:latest" "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"`,{hide:true,region:region});
-            run(`docker push "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"  `,{hide:true, region:region});
+            run(`docker tag "${repoString}:latest" "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"`,{hide:true,region:region,stdio:[process.stdin, process.stdout, process.stderr]});
+            run(`docker push "${awsAccountId}.dkr.ecr.${region}.amazonaws.com/${repoString}:latest"  `,{hide:true, region:region,stdio:[process.stdin, process.stdout, process.stderr]});
 
             console.log("AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service ");
             console.log(`REGION Version set to ${AWS_DEFAULT_REGION}`);
-            const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region,stdio:[this.stdin, this.stdout, this.stderr]}));
+            const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region,stdio:[process.stdin, process.stdout, process.stderr]}));
 
             try {
                 console.log(`Attempting to retrieve default secrets from global region ${globalRegion}`);
@@ -229,7 +239,7 @@ regions.forEach(function(region){
 
                 try {
 
-                    defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion,stdio:[this.stdin, this.stdout, this.stderr]});
+                    defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion,stdio:[process.stdin, process.stdout, process.stderr]});
 
                     const defaultSecretString = JSON.parse(defaultsSecretDefinition).SecretString;
 
@@ -251,7 +261,7 @@ regions.forEach(function(region){
 
                 console.log(`Attempting to retrieve ${stage}/${stack_name} secrets from global region ${globalRegion}`);
                 
-                const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion,stdio:[this.stdin, this.stdout, this.stderr]});
+                const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion,stdio:[process.stdin, process.stdout, process.stderr]});
                 const secretString = JSON.parse(secretDefinition).SecretString;
                 const secretJSON = JSON.parse(secretString);
                 //console.log(secretJSON);
@@ -290,7 +300,7 @@ regions.forEach(function(region){
             //console.log(oldTask);
             console.log("Registering the new task definition");
             newTask = oldTask.taskDefinition;
-            const revisionString = run(`aws ecs register-task-definition --region "${region}" --cli-input-json '${JSON.stringify(newTask)}'`,{hide:true,region:region,stdio:[this.stdin, this.stdout, this.stderr]});
+            const revisionString = run(`aws ecs register-task-definition --region "${region}" --cli-input-json '${JSON.stringify(newTask)}'`,{hide:true,region:region,stdio:[process.stdin, process.stdout, process.stderr]});
             const revision_number = JSON.parse(revisionString).taskDefinition.revision;
             console.log(`New Revision is ${JSON.parse(revisionString).taskDefinition.revision}`);
             console.log(`Updating and restarting cluser ${stage}-${stack_name}-cluster and service ${stage}-${stack_name}-service with task ${stage}-${stack_name}-family:${revision_number}`);
