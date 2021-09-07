@@ -40,6 +40,8 @@ function run(cmd, options = {}) {
         console.log(`$ ${cmd}`);
     }
 
+
+
     if(options.region){
         AWS_DEFAULT_REGION = options.region;
     }
@@ -47,7 +49,7 @@ function run(cmd, options = {}) {
     return execSync(cmd, {
         shell: '/bin/bash',
         encoding: 'utf-8',
-        //stdio: 'inherit',
+        stdio: options.stdio? options.stdio:  'pipe',
         env: {
             ...process.env,
             AWS_ACCESS_KEY_ID,
@@ -164,8 +166,9 @@ regions.forEach(function(region){
     let serviceFound = false;
    
     try { 
-        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" | jq '.services | del(.[0].events) | del(.[0].deployments)'`,{region:region});
+        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" | jq '.services | del(.[0].events) | del(.[0].deployments)'`,{region:region,stdio:[this.stdin, this.stdout, this.stderr]}).toString();
 
+        console.log(`I read ${sdString}`)
 
         serviceDefinitionTest = JSON.parse(sdString);
         
@@ -200,7 +203,7 @@ regions.forEach(function(region){
 
 
             //run(`oldpwd=$(aws ecr get-login-password --region ${region})`);
-            const accountData = run(`aws sts get-caller-identity --output json`);
+            const accountData = run(`aws sts get-caller-identity --output json`,{region:region,stdio:[this.stdin, this.stdout, this.stderr]});
             const awsAccountId = JSON.parse(accountData).Account;
 
             run(`aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${awsAccountId}.dkr.ecr.${region}.amazonaws.com`,{hide:true});
@@ -211,7 +214,7 @@ regions.forEach(function(region){
 
             console.log("AWS Register Task Definition with new Environment Variables for Secrets Manager and Update Service ");
             console.log(`REGION Version set to ${AWS_DEFAULT_REGION}`);
-            const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region}));
+            const oldTask = JSON.parse(run(`aws ecs describe-task-definition --task-definition ${stage}-${stack_name}-family`,{region:region,stdio:[this.stdin, this.stdout, this.stderr]}));
 
             try {
                 console.log(`Attempting to retrieve default secrets from global region ${globalRegion}`);
@@ -226,7 +229,7 @@ regions.forEach(function(region){
 
                 try {
 
-                    defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion});
+                    defaultsSecretDefinition = run(`aws secretsmanager get-secret-value --secret-id default/${stack_name}`,{region:globalRegion,stdio:[this.stdin, this.stdout, this.stderr]});
 
                     const defaultSecretString = JSON.parse(defaultsSecretDefinition).SecretString;
 
@@ -248,7 +251,7 @@ regions.forEach(function(region){
 
                 console.log(`Attempting to retrieve ${stage}/${stack_name} secrets from global region ${globalRegion}`);
                 
-                const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion});
+                const secretDefinition = run(`aws secretsmanager get-secret-value --secret-id ${stage}/${stack_name}`,{region:globalRegion,stdio:[this.stdin, this.stdout, this.stderr]});
                 const secretString = JSON.parse(secretDefinition).SecretString;
                 const secretJSON = JSON.parse(secretString);
                 //console.log(secretJSON);
@@ -287,7 +290,7 @@ regions.forEach(function(region){
             //console.log(oldTask);
             console.log("Registering the new task definition");
             newTask = oldTask.taskDefinition;
-            const revisionString = run(`aws ecs register-task-definition --region "${region}" --cli-input-json '${JSON.stringify(newTask)}'`,{hide:true,region:region});
+            const revisionString = run(`aws ecs register-task-definition --region "${region}" --cli-input-json '${JSON.stringify(newTask)}'`,{hide:true,region:region,stdio:[this.stdin, this.stdout, this.stderr]});
             const revision_number = JSON.parse(revisionString).taskDefinition.revision;
             console.log(`New Revision is ${JSON.parse(revisionString).taskDefinition.revision}`);
             console.log(`Updating and restarting cluser ${stage}-${stack_name}-cluster and service ${stage}-${stack_name}-service with task ${stage}-${stack_name}-family:${revision_number}`);
@@ -296,6 +299,7 @@ regions.forEach(function(region){
             if(slackHookUrl != "" && slackHookUrl != undefined){
                 run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Restarting ${stage}-${stack_name}-service in region ${region}.  Check the site in 5 minutes"}'`,{hide:true})
             }
+
         } else {
             console.log(`Short Circuiting: Skipping deployment of ${stage}-${stack_name}-service in region ${region} since infrastructure does not exist in that region `);
             if(slackHookUrl != "" && slackHookUrl != undefined){
@@ -304,6 +308,8 @@ regions.forEach(function(region){
         }
 
     }catch (e){
+        console.log('Ran into error')
+        console.log(e)
 
         let myError = e.stderr.replace(/"/g,'\\"').replace(/\n/g,"");
         
@@ -312,6 +318,8 @@ regions.forEach(function(region){
         }
         throw myError;
     }
+
+
 });
 
 
