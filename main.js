@@ -47,7 +47,7 @@ function run(cmd, options = {}) {
     return execSync(cmd, {
         shell: '/bin/bash',
         encoding: 'utf-8',
-        stdio: 'inherit',
+        //stdio: 'inherit',
         env: {
             ...process.env,
             AWS_ACCESS_KEY_ID,
@@ -165,13 +165,16 @@ regions.forEach(function(region){
    
     try { 
         const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" | jq '.services | del(.[0].events) | del(.[0].deployments)'`,{region:region});
-        
-        serviceDefinitionTest = JSON.parse(sdString);
-        //delete serviceDefinitionTest.deployments;
-        delete serviceDefinitionTest.events;
 
-        if(serviceDefinitionTest.services.length > 0){
+
+        serviceDefinitionTest = JSON.parse(sdString);
+        
+        console.log(serviceDefinitionTest[0])
+
+        
+        if(serviceDefinitionTest[0].serviceName != undefined){
             serviceFound = true;
+            console.log("Found the Service")
             if(slackHookUrl != "" && slackHookUrl != undefined){
 
                 run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
@@ -182,7 +185,10 @@ regions.forEach(function(region){
       if(slackHookUrl != "" && slackHookUrl != undefined){
 
             run(`curl -X POST ${slackHookUrl} -d 'payload={"text": "Deploying ${stage}-${stack_name}-service in region ${region}..."}'`,{hide:true});
-        }  
+        } 
+
+        console.log('saw error')
+       console.log(err);  
     }
 
     try {
