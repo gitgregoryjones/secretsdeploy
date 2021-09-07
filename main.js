@@ -47,7 +47,7 @@ function run(cmd, options = {}) {
     return execSync(cmd, {
         shell: '/bin/bash',
         encoding: 'utf-8',
-        stdio: 'ignore',
+        {stdio: 'inherit'},
         env: {
             ...process.env,
             AWS_ACCESS_KEY_ID,
