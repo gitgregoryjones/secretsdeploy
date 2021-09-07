@@ -164,7 +164,7 @@ regions.forEach(function(region){
     let serviceFound = false;
    
     try { 
-        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service"`,{region:region});
+        const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service" | jq '.services | del(.[0].events) | del(.[0].deployments)'`,{region:region});
         
         serviceDefinitionTest = JSON.parse(sdString);
         //delete serviceDefinitionTest.deployments;
