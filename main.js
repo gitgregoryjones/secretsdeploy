@@ -167,6 +167,8 @@ regions.forEach(function(region){
         const sdString = run(`aws ecs describe-services --cluster "${stage}-${stack_name}-cluster"   --service "${stage}-${stack_name}-service"`,{region:region});
         
         serviceDefinitionTest = JSON.parse(sdString);
+        //delete serviceDefinitionTest.deployments;
+        delete serviceDefinitionTest.events;
 
         if(serviceDefinitionTest.services.length > 0){
             serviceFound = true;
